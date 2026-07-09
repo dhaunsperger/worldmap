@@ -1,0 +1,645 @@
+/* Scratch-map theme. Status fill colors MUST stay in sync with
+   src/lib/statuses.ts (STATUS_COLORS) — both are annotated. */
+:root {
+  --bg: #10141d;
+  --surface: #171c28;
+  --surface-2: #1e2434;
+  --border: #2b3245;
+  --ink: #e8e4d8;
+  --ink-muted: #8b93a7;
+  --accent: #4fd8c8;
+  --danger: #c04848;
+  --status-not-visited: #252b3a;
+  --status-visited: #bd8b30;
+  --status-slept-in: #b25b26;
+  --status-lived-in: #c04848;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  font-size: 15px;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-weight: 600;
+}
+
+h3 {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-muted);
+  margin-bottom: 8px;
+}
+
+button {
+  font: inherit;
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 14px;
+  cursor: pointer;
+}
+
+button:hover {
+  border-color: var(--ink-muted);
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #08221f;
+  font-weight: 600;
+}
+
+button.primary:hover {
+  filter: brightness(1.1);
+}
+
+button.danger {
+  color: #f2b8b8;
+  border-color: var(--danger);
+}
+
+button.subtle {
+  background: transparent;
+}
+
+button.link {
+  background: none;
+  border: none;
+  color: var(--accent);
+  padding: 4px;
+}
+
+button.icon-button {
+  background: none;
+  border: none;
+  color: var(--ink-muted);
+  padding: 2px 6px;
+  font-size: 1rem;
+}
+
+button.icon-button:hover {
+  color: var(--ink);
+}
+
+input,
+textarea {
+  font: inherit;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 10px;
+  width: 100%;
+}
+
+input:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.muted {
+  color: var(--ink-muted);
+}
+
+.small {
+  font-size: 0.85rem;
+}
+
+.error {
+  color: #f2b8b8;
+}
+
+.info {
+  color: var(--accent);
+}
+
+/* ---- Layout ---- */
+
+.app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 10px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.topbar h1 {
+  font-size: 1.05rem;
+  white-space: nowrap;
+}
+
+.topbar-legend {
+  flex: 1;
+}
+
+.topbar-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.hint {
+  padding: 5px 16px;
+  font-size: 0.8rem;
+  color: var(--ink-muted);
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.main {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ---- Map ---- */
+
+.map-container {
+  position: absolute;
+  inset: 0;
+}
+
+.map-container svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+  cursor: grab;
+}
+
+.map-container svg:active {
+  cursor: grabbing;
+}
+
+.territory {
+  stroke: #0b0e15;
+  stroke-width: 0.6px;
+  vector-effect: non-scaling-stroke;
+  cursor: pointer;
+  transition: filter 80ms;
+}
+
+.territory[data-status='not_visited'] {
+  fill: var(--status-not-visited);
+}
+
+.territory[data-status='visited'] {
+  fill: var(--status-visited);
+}
+
+.territory[data-status='slept_in'] {
+  fill: var(--status-slept-in);
+}
+
+.territory[data-status='lived_in'] {
+  fill: var(--status-lived-in);
+}
+
+.territory:hover {
+  filter: brightness(1.35);
+}
+
+.territory[data-picked] {
+  stroke: var(--accent);
+  stroke-width: 1.6px;
+}
+
+.zoom-controls {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.zoom-controls button {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  font-size: 1.1rem;
+  background: var(--surface);
+}
+
+.map-tooltip {
+  position: fixed;
+  z-index: 30;
+  pointer-events: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.85rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.map-tooltip span {
+  color: var(--ink-muted);
+}
+
+.map-tooltip span[data-status='visited'] {
+  color: var(--status-visited);
+}
+
+.map-tooltip span[data-status='slept_in'] {
+  color: var(--status-slept-in);
+}
+
+.map-tooltip span[data-status='lived_in'] {
+  color: var(--status-lived-in);
+}
+
+.map-tooltip em {
+  color: var(--accent);
+  font-style: normal;
+  font-size: 0.8rem;
+}
+
+/* ---- Panels ---- */
+
+.panel {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  bottom: 12px;
+  width: 350px;
+  max-width: calc(100vw - 24px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  z-index: 10;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.panel-header h2 {
+  font-size: 1.15rem;
+}
+
+.panel-subtitle {
+  font-size: 0.8rem;
+  color: var(--ink-muted);
+}
+
+.status-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.status-button {
+  text-align: left;
+  padding: 8px 10px;
+}
+
+.status-button[data-status='visited'][data-active],
+.status-button[data-status='slept_in'][data-active],
+.status-button[data-status='lived_in'][data-active],
+.status-button[data-status='not_visited'][data-active] {
+  border-color: var(--accent);
+  background: var(--surface-2);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.trip-list {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.trip-row {
+  width: 100%;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 12px;
+}
+
+.trip-name {
+  font-weight: 600;
+}
+
+.trip-dates {
+  font-size: 0.8rem;
+  color: var(--ink-muted);
+}
+
+.trip-places {
+  font-size: 0.8rem;
+  color: var(--ink-muted);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.field > span {
+  font-size: 0.8rem;
+  color: var(--ink-muted);
+}
+
+.field-row {
+  display: flex;
+  gap: 10px;
+}
+
+.field-row .field {
+  flex: 1;
+}
+
+.button-row {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.chip {
+  font-size: 0.82rem;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--surface-2);
+}
+
+.search-results {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.search-results button {
+  width: 100%;
+  text-align: left;
+  border: none;
+  border-radius: 0;
+  background: var(--surface-2);
+}
+
+.search-results button:hover {
+  background: var(--border);
+}
+
+/* ---- Legend ---- */
+
+.legend-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 0.82rem;
+  color: var(--ink-muted);
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.swatch {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+/* ---- Dashboard ---- */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 8, 13, 0.65);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 5vh 16px;
+  z-index: 40;
+}
+
+.dashboard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  width: 640px;
+  max-width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.stat-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.stat-tile {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-value {
+  font-size: 1.7rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-label {
+  font-size: 0.8rem;
+  color: var(--ink-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.progress-row {
+  margin-bottom: 14px;
+}
+
+.progress-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  margin-bottom: 5px;
+}
+
+.progress-count {
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-track {
+  display: flex;
+  gap: 2px; /* 2px surface gap between stacked segments (mark spec) */
+  height: 14px;
+  background: var(--status-not-visited);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-seg {
+  height: 100%;
+}
+
+.year-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.year-row {
+  display: grid;
+  grid-template-columns: 44px 1fr 30px;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+}
+
+.year-label {
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.year-track {
+  height: 12px;
+}
+
+.year-bar {
+  height: 100%;
+  min-width: 4px;
+  background: var(--status-visited);
+  border-radius: 0 4px 4px 0; /* rounded data-end, flat baseline end */
+}
+
+.year-count {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-muted);
+}
+
+/* ---- Auth / setup ---- */
+
+.centered-screen {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.auth-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 28px;
+  width: 380px;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.auth-card h1 {
+  font-size: 1.3rem;
+}
+
+.setup-steps {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  line-height: 1.5;
+}
+
+.setup-steps code {
+  background: var(--surface-2);
+  padding: 1px 6px;
+  border-radius: 5px;
+  font-size: 0.85em;
+}
+
+/* ---- Toast ---- */
+
+.toast {
+  position: fixed;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface);
+  border: 1px solid var(--danger);
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 50;
+  max-width: 90vw;
+}
