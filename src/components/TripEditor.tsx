@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import type { DragEvent } from 'react'
 import type { Territory, TripDraft, TripStatus, TripTerritory } from '../types'
 import { STATUS_COLORS } from '../lib/statuses'
 
@@ -24,6 +25,7 @@ export function TripEditor({
   saving,
 }: TripEditorProps) {
   const [search, setSearch] = useState('')
+  const [dragOverBox, setDragOverBox] = useState<TripStatus | null>(null)
   const byId = useMemo(() => new Map(territories.map((t) => [t.id, t])), [territories])
 
   const matches = useMemo(() => {
@@ -47,21 +49,50 @@ export function TripEditor({
   const remove = (territoryId: string) =>
     set({ territories: draft.territories.filter((tt) => tt.territory_id !== territoryId) })
 
+  const onDrop = (e: DragEvent, status: TripStatus) => {
+    e.preventDefault()
+    setDragOverBox(null)
+    const id = e.dataTransfer.getData('text/plain')
+    if (id && draft.territories.some((tt) => tt.territory_id === id)) moveTo(id, status)
+  }
+
   const box = (status: TripStatus, label: string) => {
     const members = draft.territories.filter((tt) => tt.status === status)
     return (
-      <div className="trip-box">
+      <div
+        className="trip-box"
+        data-dragover={dragOverBox === status ? '' : undefined}
+        onDragOver={(e) => {
+          e.preventDefault()
+          e.dataTransfer.dropEffect = 'move'
+          setDragOverBox(status)
+        }}
+        onDragLeave={(e) => {
+          // Ignore leave events fired when entering a child of the box.
+          if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOverBox(null)
+        }}
+        onDrop={(e) => onDrop(e, status)}
+      >
         <span className="trip-box-label">
           <i className="swatch" style={{ background: STATUS_COLORS[status] }} />
           {label}
         </span>
         <div className="chips">
-          {members.length === 0 && <span className="muted small">Empty</span>}
+          {members.length === 0 && <span className="muted small">Empty — drag names here</span>}
           {members.map((tt: TripTerritory) => (
-            <span key={tt.territory_id} className="chip">
+            <span
+              key={tt.territory_id}
+              className="chip"
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData('text/plain', tt.territory_id)
+                e.dataTransfer.effectAllowed = 'move'
+              }}
+              onDragEnd={() => setDragOverBox(null)}
+            >
               <button
                 className="chip-name"
-                title={`Move to ${status === 'visited' ? 'Slept in' : 'Visited'}`}
+                title={`Drag (or click) to move to ${status === 'visited' ? 'Slept in' : 'Visited'}`}
                 onClick={() => moveTo(tt.territory_id, OTHER_BOX[status])}
               >
                 {byId.get(tt.territory_id)?.name ?? tt.territory_id}
@@ -123,8 +154,8 @@ export function TripEditor({
       <section>
         <h3>Territories</h3>
         <p className="muted small">
-          Click the map or search to add places. Click a name to move it between boxes — saving
-          the trip paints each place at least that color.
+          Click the map or search to add places. Drag a name (or click it) to move it between
+          boxes — saving the trip paints each place at least that color.
         </p>
         <input
           type="search"

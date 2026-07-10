@@ -451,6 +451,16 @@ textarea:focus {
   border-radius: 10px;
   padding: 10px 12px;
   margin-top: 10px;
+  transition: border-color 100ms, background 100ms;
+}
+
+.trip-box[data-dragover] {
+  border-color: var(--accent);
+  background: rgba(79, 216, 200, 0.06);
+}
+
+.chip[draggable] {
+  cursor: grab;
 }
 
 .trip-box-label {
