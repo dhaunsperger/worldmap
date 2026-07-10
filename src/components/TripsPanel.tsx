@@ -36,11 +36,11 @@ export function TripsPanel({ trips, territoryNames, onEditTrip, onNewTrip, onClo
                 <span className="trip-name">{t.name}</span>
                 <span className="trip-dates">{formatTripDates(t)}</span>
                 <span className="trip-places">
-                  {t.territory_ids
-                    .map((id) => territoryNames.get(id) ?? id)
+                  {t.territories
+                    .map((tt) => territoryNames.get(tt.territory_id) ?? tt.territory_id)
                     .slice(0, 4)
                     .join(', ')}
-                  {t.territory_ids.length > 4 ? ` +${t.territory_ids.length - 4} more` : ''}
+                  {t.territories.length > 4 ? ` +${t.territories.length - 4} more` : ''}
                 </span>
               </button>
             </li>

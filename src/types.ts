@@ -10,6 +10,14 @@ export interface Territory {
   path: string
 }
 
+/** What a trip records about each of its territories. */
+export type TripStatus = 'visited' | 'slept_in'
+
+export interface TripTerritory {
+  territory_id: string
+  status: TripStatus
+}
+
 export interface Trip {
   id: string
   name: string
@@ -17,7 +25,7 @@ export interface Trip {
   end_date: string | null
   notes: string
   created_at: string
-  territory_ids: string[]
+  territories: TripTerritory[]
 }
 
 /** Trip being created/edited; id absent until first save. */
@@ -27,5 +35,5 @@ export interface TripDraft {
   start_date: string | null
   end_date: string | null
   notes: string
-  territory_ids: string[]
+  territories: TripTerritory[]
 }

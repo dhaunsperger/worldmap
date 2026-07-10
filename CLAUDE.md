@@ -25,9 +25,14 @@ territories) add the time dimension.
   order on left-click. `not_visited` = **no row** in `territory_status`
   (deleting the row, not writing a status, returns a territory to unvisited).
 - **Trips**: first-class records (name, optional start/end dates, notes) with
-  N territories via `trip_territories`. Status is deliberately independent of
-  trips so old visits can be tracked with zero detail; saving a trip bumps any
-  `not_visited` member territory to `visited` as a convenience.
+  N territories via `trip_territories`. Each trip territory carries its own
+  status (`visited` or `slept_in` — the editor's two boxes). Status is
+  deliberately independent of trips so old visits can be tracked with zero
+  detail; saving a trip **raises** each member territory to at least the
+  trip's status for it (never downgrades — see `raiseStatus`/`STATUS_RANK`).
+  Deleting a trip offers to re-derive its territories' statuses from the
+  remaining trips (lived_in is never touched — trips can't set it, so it was
+  hand-painted).
 
 ## Files
 
@@ -52,6 +57,15 @@ territories) add the time dimension.
 - **Rapid clicks**: `useStatuses` mirrors state in a ref so multiple clicks
   between re-renders cycle correctly, and debounces writes 400 ms per
   territory so cycling sends one upsert, not three racing ones.
+- **Map clicks are NOT path onClick**: pointer capture during pan retargets
+  pointerup (and the derived click) to the `<svg>`, so path `onClick` silently
+  never fires on real hardware (synthetic dispatched clicks DO fire — which is
+  how this shipped broken once; always verify with real `page.mouse.click`).
+  `MapView` records the territory at pointerdown and resolves the click at
+  pointerup if total movement stayed under 5 px. Don't reintroduce onClick.
+- **"JWT issued at future time"**: transient Supabase clock skew right after
+  sign-in/confirmation. `src/lib/retry.ts` retries matching failures once
+  after 1.5 s — wrap new Supabase calls in `retryClockSkew` too.
 - **Demo mode**: `VITE_DEMO=1 npm run dev` skips Supabase entirely (in-memory
   data). Use it for UI work and Playwright verification — no credentials
   needed.

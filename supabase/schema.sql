@@ -27,8 +27,15 @@ create table if not exists public.trip_territories (
   trip_id uuid not null references public.trips (id) on delete cascade,
   user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
   territory_id text not null,
+  -- what this trip says about the territory: passed through or stayed over
+  status text not null default 'visited' check (status in ('visited', 'slept_in')),
   primary key (trip_id, territory_id)
 );
+
+-- Upgrade path for databases provisioned before the status column existed.
+alter table public.trip_territories
+  add column if not exists status text not null default 'visited'
+    check (status in ('visited', 'slept_in'));
 
 alter table public.territory_status enable row level security;
 alter table public.trips enable row level security;

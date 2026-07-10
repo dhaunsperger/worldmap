@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import type { Trip, TripDraft } from '../types'
+import { retryClockSkew } from '../lib/retry'
+import type { Trip, TripDraft, TripStatus } from '../types'
 
 /** Sort: dated trips newest-first, undated trips last (newest-created first). */
 function sortTrips(trips: Trip[]): Trip[] {
@@ -21,16 +22,27 @@ export function useTrips(userId: string | undefined) {
     if (!userId || !supabase) return
     let cancelled = false
     Promise.all([
-      supabase.from('trips').select('id, name, start_date, end_date, notes, created_at'),
-      supabase.from('trip_territories').select('trip_id, territory_id'),
+      retryClockSkew(() =>
+        supabase!.from('trips').select('id, name, start_date, end_date, notes, created_at'),
+      ),
+      retryClockSkew(() =>
+        supabase!.from('trip_territories').select('trip_id, territory_id, status'),
+      ),
     ]).then(([tripsRes, ttRes]) => {
       if (cancelled) return
       if (tripsRes.error || ttRes.error) {
         setError((tripsRes.error ?? ttRes.error)!.message)
       } else {
-        const byTrip: Record<string, string[]> = {}
-        for (const row of ttRes.data) (byTrip[row.trip_id] ??= []).push(row.territory_id)
-        setTrips(sortTrips(tripsRes.data.map((t) => ({ ...t, territory_ids: byTrip[t.id] ?? [] }))))
+        const byTrip: Record<string, { territory_id: string; status: TripStatus }[]> = {}
+        for (const row of ttRes.data!) {
+          ;(byTrip[row.trip_id] ??= []).push({
+            territory_id: row.territory_id,
+            status: row.status as TripStatus,
+          })
+        }
+        setTrips(
+          sortTrips(tripsRes.data!.map((t) => ({ ...t, territories: byTrip[t.id] ?? [] }))),
+        )
       }
       setLoaded(true)
     })
@@ -52,19 +64,21 @@ export function useTrips(userId: string | undefined) {
         ...fields,
         id: draft.id ?? crypto.randomUUID(),
         created_at: new Date().toISOString(),
-        territory_ids: draft.territory_ids,
+        territories: draft.territories,
       }
       setTrips((prev) => sortTrips([...prev.filter((t) => t.id !== saved.id), saved]))
       return saved
     }
     let saved: Trip
     if (draft.id) {
-      const { data, error } = await supabase
-        .from('trips')
-        .update(fields)
-        .eq('id', draft.id)
-        .select('id, name, start_date, end_date, notes, created_at')
-        .single()
+      const { data, error } = await retryClockSkew(() =>
+        supabase!
+          .from('trips')
+          .update(fields)
+          .eq('id', draft.id!)
+          .select('id, name, start_date, end_date, notes, created_at')
+          .single(),
+      )
       if (error) {
         setError(error.message)
         return null
@@ -75,23 +89,29 @@ export function useTrips(userId: string | undefined) {
         setError(del.error.message)
         return null
       }
-      saved = { ...data, territory_ids: draft.territory_ids }
+      saved = { ...data!, territories: draft.territories }
     } else {
-      const { data, error } = await supabase
-        .from('trips')
-        .insert(fields)
-        .select('id, name, start_date, end_date, notes, created_at')
-        .single()
+      const { data, error } = await retryClockSkew(() =>
+        supabase!
+          .from('trips')
+          .insert(fields)
+          .select('id, name, start_date, end_date, notes, created_at')
+          .single(),
+      )
       if (error) {
         setError(error.message)
         return null
       }
-      saved = { ...data, territory_ids: draft.territory_ids }
+      saved = { ...data!, territories: draft.territories }
     }
-    if (draft.territory_ids.length) {
-      const { error } = await supabase
-        .from('trip_territories')
-        .insert(draft.territory_ids.map((tid) => ({ trip_id: saved.id, territory_id: tid })))
+    if (draft.territories.length) {
+      const { error } = await supabase.from('trip_territories').insert(
+        draft.territories.map((tt) => ({
+          trip_id: saved.id,
+          territory_id: tt.territory_id,
+          status: tt.status,
+        })),
+      )
       if (error) {
         setError(error.message)
         return null

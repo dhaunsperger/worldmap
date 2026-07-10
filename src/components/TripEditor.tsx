@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import type { Territory, TripDraft } from '../types'
+import type { Territory, TripDraft, TripStatus, TripTerritory } from '../types'
+import { STATUS_COLORS } from '../lib/statuses'
 
 interface TripEditorProps {
   draft: TripDraft
@@ -10,6 +11,8 @@ interface TripEditorProps {
   onCancel: () => void
   saving: boolean
 }
+
+const OTHER_BOX: Record<TripStatus, TripStatus> = { visited: 'slept_in', slept_in: 'visited' }
 
 export function TripEditor({
   draft,
@@ -26,12 +29,56 @@ export function TripEditor({
   const matches = useMemo(() => {
     const q = search.trim().toLowerCase()
     if (q.length < 2) return []
+    const inTrip = new Set(draft.territories.map((tt) => tt.territory_id))
     return territories
-      .filter((t) => t.name.toLowerCase().includes(q) && !draft.territory_ids.includes(t.id))
+      .filter((t) => t.name.toLowerCase().includes(q) && !inTrip.has(t.id))
       .slice(0, 8)
-  }, [search, territories, draft.territory_ids])
+  }, [search, territories, draft.territories])
 
   const set = (patch: Partial<TripDraft>) => onChange({ ...draft, ...patch })
+
+  const moveTo = (territoryId: string, status: TripStatus) =>
+    set({
+      territories: draft.territories.map((tt) =>
+        tt.territory_id === territoryId ? { ...tt, status } : tt,
+      ),
+    })
+
+  const remove = (territoryId: string) =>
+    set({ territories: draft.territories.filter((tt) => tt.territory_id !== territoryId) })
+
+  const box = (status: TripStatus, label: string) => {
+    const members = draft.territories.filter((tt) => tt.status === status)
+    return (
+      <div className="trip-box">
+        <span className="trip-box-label">
+          <i className="swatch" style={{ background: STATUS_COLORS[status] }} />
+          {label}
+        </span>
+        <div className="chips">
+          {members.length === 0 && <span className="muted small">Empty</span>}
+          {members.map((tt: TripTerritory) => (
+            <span key={tt.territory_id} className="chip">
+              <button
+                className="chip-name"
+                title={`Move to ${status === 'visited' ? 'Slept in' : 'Visited'}`}
+                onClick={() => moveTo(tt.territory_id, OTHER_BOX[status])}
+              >
+                {byId.get(tt.territory_id)?.name ?? tt.territory_id}
+              </button>
+              <button
+                className="chip-remove"
+                title="Remove from trip"
+                onClick={() => remove(tt.territory_id)}
+              >
+                ✕
+              </button>
+            </span>
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <aside className="panel">
@@ -75,7 +122,10 @@ export function TripEditor({
 
       <section>
         <h3>Territories</h3>
-        <p className="muted small">Click the map to add or remove places, or search:</p>
+        <p className="muted small">
+          Click the map or search to add places. Click a name to move it between boxes — saving
+          the trip paints each place at least that color.
+        </p>
         <input
           type="search"
           value={search}
@@ -88,7 +138,9 @@ export function TripEditor({
               <li key={t.id}>
                 <button
                   onClick={() => {
-                    set({ territory_ids: [...draft.territory_ids, t.id] })
+                    set({
+                      territories: [...draft.territories, { territory_id: t.id, status: 'visited' }],
+                    })
                     setSearch('')
                   }}
                 >
@@ -98,19 +150,8 @@ export function TripEditor({
             ))}
           </ul>
         )}
-        <div className="chips">
-          {draft.territory_ids.length === 0 && <span className="muted small">None yet.</span>}
-          {draft.territory_ids.map((id) => (
-            <button
-              key={id}
-              className="chip"
-              title="Remove"
-              onClick={() => set({ territory_ids: draft.territory_ids.filter((x) => x !== id) })}
-            >
-              {byId.get(id)?.name ?? id} ✕
-            </button>
-          ))}
-        </div>
+        {box('visited', 'Visited')}
+        {box('slept_in', 'Slept in')}
       </section>
 
       <label className="field">
