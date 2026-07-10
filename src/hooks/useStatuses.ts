@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { nextStatus } from '../lib/statuses'
+import { nextStatus, STATUS_RANK } from '../lib/statuses'
+import { retryClockSkew } from '../lib/retry'
 import type { Status } from '../types'
 
 /** Debounce per-territory writes so rapid cycling sends one final write. */
@@ -22,21 +23,20 @@ export function useStatuses(userId: string | undefined) {
   useEffect(() => {
     if (!userId || !supabase) return
     let cancelled = false
-    supabase
-      .from('territory_status')
-      .select('territory_id, status')
-      .then(({ data, error }) => {
+    retryClockSkew(() => supabase!.from('territory_status').select('territory_id, status')).then(
+      ({ data, error }) => {
         if (cancelled) return
         if (error) {
           setError(error.message)
         } else {
           const map: Record<string, Status> = {}
-          for (const row of data) map[row.territory_id] = row.status as Status
+          for (const row of data!) map[row.territory_id] = row.status as Status
           statusesRef.current = map
           setStatuses(map)
         }
         setLoaded(true)
-      })
+      },
+    )
     return () => {
       cancelled = true
     }
@@ -50,15 +50,16 @@ export function useStatuses(userId: string | undefined) {
       territoryId,
       setTimeout(async () => {
         timers.delete(territoryId)
-        const { error } =
+        const { error } = await retryClockSkew(() =>
           status === 'not_visited'
-            ? await supabase!.from('territory_status').delete().eq('territory_id', territoryId)
-            : await supabase!
+            ? supabase!.from('territory_status').delete().eq('territory_id', territoryId)
+            : supabase!
                 .from('territory_status')
                 .upsert(
                   { territory_id: territoryId, status, updated_at: new Date().toISOString() },
                   { onConflict: 'user_id,territory_id' },
-                )
+                ),
+        )
         if (error) setError(error.message)
       }, PERSIST_DELAY_MS),
     )
@@ -83,12 +84,11 @@ export function useStatuses(userId: string | undefined) {
     [setStatus],
   )
 
-  /** Bump any not-yet-visited territories to 'visited' (used on trip save). */
-  const markVisited = useCallback(
-    (territoryIds: string[]) => {
-      for (const id of territoryIds) {
-        if (!statusesRef.current[id]) setStatus(id, 'visited')
-      }
+  /** Raise a territory to at least `status` — never downgrade (trip save). */
+  const raiseStatus = useCallback(
+    (territoryId: string, status: Status) => {
+      const current = statusesRef.current[territoryId] ?? 'not_visited'
+      if (STATUS_RANK[status] > STATUS_RANK[current]) setStatus(territoryId, status)
     },
     [setStatus],
   )
@@ -99,7 +99,7 @@ export function useStatuses(userId: string | undefined) {
     error,
     setStatus,
     cycleStatus,
-    markVisited,
+    raiseStatus,
     clearError: () => setError(null),
   }
 }

@@ -11,8 +11,8 @@ import { useStatuses } from './hooks/useStatuses'
 import { useTrips } from './hooks/useTrips'
 import { loadTerritories } from './lib/mapData'
 import { supabaseConfigured } from './lib/supabase'
-import { STATUS_CYCLE, STATUS_COLORS, STATUS_LABELS } from './lib/statuses'
-import type { Territory, Trip, TripDraft } from './types'
+import { STATUS_CYCLE, STATUS_COLORS, STATUS_LABELS, STATUS_RANK } from './lib/statuses'
+import type { Status, Territory, Trip, TripDraft } from './types'
 
 type Panel = { type: 'territory'; id: string } | { type: 'trips' } | null
 
@@ -24,13 +24,13 @@ const emptyDraft = (territoryIds: string[] = []): TripDraft => ({
   start_date: null,
   end_date: null,
   notes: '',
-  territory_ids: territoryIds,
+  territories: territoryIds.map((id) => ({ territory_id: id, status: 'visited' })),
 })
 
 export default function App() {
   const auth = useAuth()
   const userId = auth.session?.user.id
-  const { statuses, setStatus, cycleStatus, markVisited, error: statusError, clearError: clearStatusError } = useStatuses(userId)
+  const { statuses, setStatus, cycleStatus, raiseStatus, error: statusError, clearError: clearStatusError } = useStatuses(userId)
   const { trips, saveTrip, deleteTrip, error: tripError, clearError: clearTripError } = useTrips(userId)
 
   const [territories, setTerritories] = useState<Territory[] | null>(null)
@@ -39,6 +39,7 @@ export default function App() {
   const [draft, setDraft] = useState<TripDraft | null>(null)
   const [showDashboard, setShowDashboard] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [pendingDelete, setPendingDelete] = useState<TripDraft | null>(null)
 
   useEffect(() => {
     loadTerritories().then(setTerritories, (e) => setMapError(String(e)))
@@ -63,11 +64,12 @@ export default function App() {
 
   const handleTerritoryClick = (id: string) => {
     if (draft) {
+      const inTrip = draft.territories.some((tt) => tt.territory_id === id)
       setDraft({
         ...draft,
-        territory_ids: draft.territory_ids.includes(id)
-          ? draft.territory_ids.filter((x) => x !== id)
-          : [...draft.territory_ids, id],
+        territories: inTrip
+          ? draft.territories.filter((tt) => tt.territory_id !== id)
+          : [...draft.territories, { territory_id: id, status: 'visited' }],
       })
     } else {
       cycleStatus(id)
@@ -80,16 +82,40 @@ export default function App() {
     const saved = await saveTrip(draft)
     setSaving(false)
     if (saved) {
-      markVisited(saved.territory_ids)
+      // Paint the map at least as strongly as the trip claims (never downgrade).
+      for (const tt of saved.territories) raiseStatus(tt.territory_id, tt.status)
       setDraft(null)
       setPanel({ type: 'trips' })
     }
   }
 
-  const handleDeleteTrip = async () => {
-    if (!draft?.id) return
-    if (!confirm(`Delete trip "${draft.name || 'Untitled trip'}"?`)) return
-    await deleteTrip(draft.id)
+  const confirmDeleteTrip = async (resetTerritories: boolean) => {
+    const doomed = pendingDelete
+    setPendingDelete(null)
+    if (!doomed?.id) return
+    await deleteTrip(doomed.id)
+    if (resetTerritories) {
+      // Re-derive each territory's status from the trips that remain. Manual
+      // paint isn't tracked separately, so this is best-effort — but leave
+      // lived_in alone (trips can't set it, so it was set by hand).
+      const remaining = trips.filter((t) => t.id !== doomed.id)
+      for (const tt of doomed.territories) {
+        const current = statuses[tt.territory_id] ?? 'not_visited'
+        if (current === 'not_visited' || current === 'lived_in') continue
+        let implied: Status = 'not_visited'
+        for (const t of remaining) {
+          for (const other of t.territories) {
+            if (
+              other.territory_id === tt.territory_id &&
+              STATUS_RANK[other.status] > STATUS_RANK[implied]
+            ) {
+              implied = other.status
+            }
+          }
+        }
+        if (STATUS_RANK[implied] < STATUS_RANK[current]) setStatus(tt.territory_id, implied)
+      }
+    }
     setDraft(null)
     setPanel({ type: 'trips' })
   }
@@ -141,7 +167,7 @@ export default function App() {
         <MapView
           territories={territories}
           statuses={statuses}
-          pickedIds={draft ? new Set(draft.territory_ids) : null}
+          pickedIds={draft ? new Set(draft.territories.map((tt) => tt.territory_id)) : null}
           onTerritoryClick={handleTerritoryClick}
           onTerritoryContext={(id) => {
             if (!draft) setPanel({ type: 'territory', id })
@@ -182,12 +208,41 @@ export default function App() {
             territories={territories}
             onChange={setDraft}
             onSave={handleSaveTrip}
-            onDelete={draft.id ? handleDeleteTrip : null}
+            onDelete={draft.id ? () => setPendingDelete(draft) : null}
             onCancel={() => setDraft(null)}
             saving={saving}
           />
         )}
       </main>
+
+      {pendingDelete && (
+        <div className="overlay" onClick={() => setPendingDelete(null)}>
+          <div className="dialog" onClick={(e) => e.stopPropagation()}>
+            <h2>Delete “{pendingDelete.name || 'Untitled trip'}”?</h2>
+            {pendingDelete.territories.length > 0 ? (
+              <p className="muted">
+                It covers {pendingDelete.territories.length}{' '}
+                {pendingDelete.territories.length === 1 ? 'territory' : 'territories'}. You can
+                also reset their map colors to whatever your other trips still support
+                (hand-painted “lived in” is never touched).
+              </p>
+            ) : (
+              <p className="muted">This can't be undone.</p>
+            )}
+            <div className="button-row">
+              <button className="danger" onClick={() => confirmDeleteTrip(false)}>
+                Delete trip only
+              </button>
+              {pendingDelete.territories.length > 0 && (
+                <button className="danger" onClick={() => confirmDeleteTrip(true)}>
+                  Delete &amp; reset territories
+                </button>
+              )}
+              <button onClick={() => setPendingDelete(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showDashboard && (
         <Dashboard

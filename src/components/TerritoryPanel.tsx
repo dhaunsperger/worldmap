@@ -23,7 +23,9 @@ export function TerritoryPanel({
   onNewTripHere,
   onClose,
 }: TerritoryPanelProps) {
-  const tripsHere = trips.filter((t) => t.territory_ids.includes(territory.id))
+  const tripsHere = trips.filter((t) =>
+    t.territories.some((tt) => tt.territory_id === territory.id),
+  )
 
   return (
     <aside className="panel">

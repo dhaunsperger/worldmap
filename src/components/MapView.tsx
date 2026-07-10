@@ -21,19 +21,25 @@ interface Transform {
 
 const MIN_ZOOM = 1
 const MAX_ZOOM = 60
+/** Screen px of movement before a press becomes a pan instead of a click. */
+const PAN_THRESHOLD = 5
 
-/** Memoized so hover/tooltip state changes don't re-render 300 paths. */
+/**
+ * Memoized so hover/tooltip state changes don't re-render 300 paths.
+ * NOTE: no onClick here — clicks are resolved in the svg's pointerup using the
+ * territory recorded at pointerdown. Pointer capture during panning retargets
+ * pointerup (and the derived click) to the svg, so path onClick never fires
+ * reliably on real hardware. Don't reintroduce it.
+ */
 const MapPaths = memo(function MapPaths({
   territories,
   statuses,
   pickedIds,
-  onClick,
   onContext,
 }: {
   territories: Territory[]
   statuses: Record<string, Status>
   pickedIds: Set<string> | null
-  onClick: (id: string) => void
   onContext: (id: string) => void
 }) {
   return (
@@ -46,7 +52,6 @@ const MapPaths = memo(function MapPaths({
           data-status={statuses[t.id] ?? 'not_visited'}
           data-picked={pickedIds?.has(t.id) ? '' : undefined}
           data-territory-id={t.id}
-          onClick={() => onClick(t.id)}
           onContextMenu={(e) => {
             e.preventDefault()
             onContext(t.id)
@@ -69,10 +74,16 @@ export function MapView({
   const [transform, setTransform] = useState<Transform>({ x: 0, y: 0, k: 1 })
   const [hovered, setHovered] = useState<Territory | null>(null)
 
-  // Pointer bookkeeping for drag-pan and two-finger pinch. Lives in refs:
+  // Pointer bookkeeping for click-vs-pan and two-finger pinch. Lives in refs:
   // pointer moves must not re-render the map.
   const pointers = useRef(new Map<number, { x: number; y: number }>())
-  const dragMoved = useRef(false)
+  const primary = useRef<{
+    id: number
+    startX: number
+    startY: number
+    territoryId: string | null
+  } | null>(null)
+  const panning = useRef(false)
   const pinchDist = useRef(0)
   const lastMouse = useRef({ x: 0, y: 0 })
 
@@ -121,18 +132,25 @@ export function MapView({
     [toSvgPoint, zoomAt],
   )
 
-  const onPointerDown = useCallback(
-    (e: ReactPointerEvent<SVGSVGElement>) => {
-      pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
-      if (pointers.current.size === 1) dragMoved.current = false
-      if (pointers.current.size === 2) {
-        const [a, b] = [...pointers.current.values()]
-        pinchDist.current = Math.hypot(a.x - b.x, a.y - b.y)
+  const onPointerDown = useCallback((e: ReactPointerEvent<SVGSVGElement>) => {
+    if (e.button !== 0) return // right/middle button: not a click or pan
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    if (pointers.current.size === 1) {
+      panning.current = false
+      const target = e.target as Element
+      primary.current = {
+        id: e.pointerId,
+        startX: e.clientX,
+        startY: e.clientY,
+        territoryId: target.getAttribute?.('data-territory-id') ?? null,
       }
-      svgRef.current?.setPointerCapture(e.pointerId)
-    },
-    [],
-  )
+    } else if (pointers.current.size === 2) {
+      // A second finger means pinch — never a click.
+      panning.current = true
+      const [a, b] = [...pointers.current.values()]
+      pinchDist.current = Math.hypot(a.x - b.x, a.y - b.y)
+    }
+  }, [])
 
   const onPointerMove = useCallback(
     (e: ReactPointerEvent<SVGSVGElement>) => {
@@ -150,16 +168,20 @@ export function MapView({
       pointers.current.set(e.pointerId, cur)
 
       if (pointers.current.size === 1) {
-        const dx = cur.x - prev.x
-        const dy = cur.y - prev.y
-        if (Math.abs(dx) + Math.abs(dy) > 0) {
+        const p = primary.current
+        if (!panning.current && p && e.pointerId === p.id) {
+          // Small jitter within a click must not start a pan (and must not
+          // suppress the click) — real mice move a few px mid-press.
+          if (Math.hypot(cur.x - p.startX, cur.y - p.startY) < PAN_THRESHOLD) return
+          panning.current = true
+          svgRef.current?.setPointerCapture(e.pointerId)
+        }
+        if (panning.current) {
           const a = toSvgPoint(prev.x, prev.y)
           const b = toSvgPoint(cur.x, cur.y)
-          if (Math.hypot(cur.x - prev.x, cur.y - prev.y) > 2) dragMoved.current = true
           setTransform((t) => clampTransform({ ...t, x: t.x + (b.x - a.x), y: t.y + (b.y - a.y) }))
         }
       } else if (pointers.current.size === 2) {
-        dragMoved.current = true
         const [a, b] = [...pointers.current.values()]
         const dist = Math.hypot(a.x - b.x, a.y - b.y)
         if (pinchDist.current > 0) {
@@ -172,19 +194,26 @@ export function MapView({
     [toSvgPoint, clampTransform, zoomAt],
   )
 
-  const onPointerUp = useCallback((e: ReactPointerEvent<SVGSVGElement>) => {
-    pointers.current.delete(e.pointerId)
-    pinchDist.current = 0
-  }, [])
-
-  // Swallow the click that ends a drag so it doesn't cycle a territory.
-  const handleTerritoryClick = useCallback(
-    (id: string) => {
-      if (dragMoved.current) return
-      onTerritoryClick(id)
+  const onPointerUp = useCallback(
+    (e: ReactPointerEvent<SVGSVGElement>) => {
+      pointers.current.delete(e.pointerId)
+      pinchDist.current = 0
+      const p = primary.current
+      if (p && e.pointerId === p.id) {
+        if (!panning.current && p.territoryId) onTerritoryClick(p.territoryId)
+        primary.current = null
+      }
+      if (pointers.current.size === 0) panning.current = false
     },
     [onTerritoryClick],
   )
+
+  const onPointerCancel = useCallback((e: ReactPointerEvent<SVGSVGElement>) => {
+    pointers.current.delete(e.pointerId)
+    pinchDist.current = 0
+    if (primary.current?.id === e.pointerId) primary.current = null
+    if (pointers.current.size === 0) panning.current = false
+  }, [])
 
   const handleHover = useCallback(
     (e: ReactPointerEvent<SVGSVGElement>) => {
@@ -211,7 +240,7 @@ export function MapView({
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
+        onPointerCancel={onPointerCancel}
         onPointerOver={handleHover}
         onPointerLeave={() => setHovered(null)}
       >
@@ -220,7 +249,6 @@ export function MapView({
             territories={territories}
             statuses={statuses}
             pickedIds={pickedIds}
-            onClick={handleTerritoryClick}
             onContext={onTerritoryContext}
           />
         </g>

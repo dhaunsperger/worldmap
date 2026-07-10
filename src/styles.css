@@ -10,9 +10,9 @@
   --accent: #4fd8c8;
   --danger: #c04848;
   --status-not-visited: #252b3a;
-  --status-visited: #bd8b30;
-  --status-slept-in: #b25b26;
-  --status-lived-in: #c04848;
+  --status-visited: #4f94dd;
+  --status-slept-in: #bd8b30;
+  --status-lived-in: #2f7d4c;
 }
 
 * {
@@ -413,10 +413,52 @@ textarea:focus {
 }
 
 .chip {
+  display: inline-flex;
+  align-items: center;
   font-size: 0.82rem;
-  padding: 4px 10px;
+  border: 1px solid var(--border);
   border-radius: 999px;
   background: var(--surface-2);
+  overflow: hidden;
+}
+
+.chip button {
+  background: none;
+  border: none;
+  border-radius: 0;
+  padding: 4px 6px;
+}
+
+.chip .chip-name {
+  padding-left: 10px;
+}
+
+.chip .chip-name:hover {
+  color: var(--accent);
+}
+
+.chip .chip-remove {
+  color: var(--ink-muted);
+  padding-right: 10px;
+}
+
+.chip .chip-remove:hover {
+  color: var(--danger);
+}
+
+.trip-box {
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-top: 10px;
+}
+
+.trip-box-label {
+  font-size: 0.8rem;
+  color: var(--ink-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .search-results {
@@ -489,6 +531,24 @@ textarea:focus {
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+.dialog {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 22px;
+  width: 440px;
+  max-width: 100%;
+  margin-top: 20vh;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  height: fit-content;
+}
+
+.dialog h2 {
+  font-size: 1.1rem;
 }
 
 .stat-tiles {
