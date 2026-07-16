@@ -1,0 +1,204 @@
+{
+	"version": 1,
+	"exported_at": "2026-07-16T12:27:13.677317+00:00",
+	"statuses": {
+		"136": "visited",
+		"156": "slept_in",
+		"158": "slept_in",
+		"203": "slept_in",
+		"246": "slept_in",
+		"250": "slept_in",
+		"276": "slept_in",
+		"336": "visited",
+		"340": "visited",
+		"372": "slept_in",
+		"380": "slept_in",
+		"388": "visited",
+		"392": "visited",
+		"410": "visited",
+		"484": "slept_in",
+		"528": "slept_in",
+		"620": "slept_in",
+		"702": "slept_in",
+		"724": "slept_in",
+		"756": "slept_in",
+		"826": "slept_in",
+		"US-FL": "lived_in",
+		"US-GA": "slept_in",
+		"044": "visited",
+		"US-KY": "visited",
+		"US-MT": "visited",
+		"US-WY": "slept_in",
+		"US-CO": "slept_in",
+		"US-ID": "slept_in",
+		"US-TX": "lived_in",
+		"US-LA": "slept_in",
+		"US-MS": "slept_in",
+		"US-AL": "slept_in",
+		"US-SC": "slept_in",
+		"US-TN": "slept_in",
+		"US-NC": "slept_in",
+		"US-AR": "visited",
+		"US-MO": "slept_in",
+		"US-IL": "slept_in",
+		"US-IA": "slept_in",
+		"US-WI": "slept_in",
+		"US-MI": "slept_in",
+		"US-OH": "slept_in",
+		"US-OK": "slept_in",
+		"US-KS": "visited",
+		"US-NE": "slept_in",
+		"US-SD": "slept_in",
+		"US-VA": "visited",
+		"US-NY": "slept_in",
+		"US-PA": "slept_in",
+		"US-MA": "slept_in",
+		"CA-BC": "visited",
+		"US-AK": "visited",
+		"US-WA": "slept_in",
+		"US-OR": "slept_in",
+		"US-CA": "slept_in",
+		"US-AZ": "visited",
+		"US-NV": "slept_in",
+		"US-UT": "slept_in",
+		"US-NM": "slept_in",
+		"040": "slept_in",
+		"US-IN": "slept_in",
+		"US-MD": "visited",
+		"US-NJ": "slept_in"
+	},
+	"trips": [
+		{
+			"id": "660e6548-9c66-4c22-87e9-46b7d4ccb9ee",
+			"name": "Wydaho",
+			"start_date": "2026-06-16",
+			"end_date": "2026-07-07",
+			"notes": "",
+			"created_at": "2026-07-10T01:26:05.022147+00:00",
+			"territories": [
+				{
+					"territory_id": "US-NM",
+					"status": "visited"
+				},
+				{
+					"territory_id": "US-CO",
+					"status": "slept_in"
+				},
+				{
+					"territory_id": "US-WY",
+					"status": "slept_in"
+				},
+				{
+					"territory_id": "US-MT",
+					"status": "visited"
+				},
+				{
+					"territory_id": "US-ID",
+					"status": "slept_in"
+				}
+			]
+		},
+		{
+			"id": "5156bfeb-d7f2-4169-b8a4-57c4dee7fc8e",
+			"name": "W Carib cruise",
+			"start_date": "2019-05-26",
+			"end_date": "2019-06-02",
+			"notes": "",
+			"created_at": "2026-07-10T01:30:54.103863+00:00",
+			"territories": [
+				{
+					"territory_id": "484",
+					"status": "visited"
+				},
+				{
+					"territory_id": "136",
+					"status": "visited"
+				},
+				{
+					"territory_id": "388",
+					"status": "visited"
+				}
+			]
+		},
+		{
+			"id": "d800336c-ca53-4682-aa0a-e40697bc57b3",
+			"name": "W Carib cruise 2",
+			"start_date": "2023-06-11",
+			"end_date": "2023-06-18",
+			"notes": "",
+			"created_at": "2026-07-10T01:31:50.55304+00:00",
+			"territories": [
+				{
+					"territory_id": "484",
+					"status": "visited"
+				},
+				{
+					"territory_id": "340",
+					"status": "visited"
+				}
+			]
+		},
+		{
+			"id": "ea29fd71-7ac5-42f1-8854-19a5aabc33ec",
+			"name": "Choir tour 1 - C Europe",
+			"start_date": "2013-06-17",
+			"end_date": "2013-06-24",
+			"notes": "",
+			"created_at": "2026-07-10T01:34:52.258987+00:00",
+			"territories": [
+				{
+					"territory_id": "276",
+					"status": "slept_in"
+				},
+				{
+					"territory_id": "203",
+					"status": "slept_in"
+				},
+				{
+					"territory_id": "040",
+					"status": "slept_in"
+				}
+			]
+		},
+		{
+			"id": "d25ccf0e-b115-41ae-a6d7-c3a1cba187fc",
+			"name": "Choir tour 2 - Rome",
+			"start_date": "2016-12-28",
+			"end_date": "2017-01-04",
+			"notes": "",
+			"created_at": "2026-07-10T01:36:02.501989+00:00",
+			"territories": [
+				{
+					"territory_id": "380",
+					"status": "slept_in"
+				},
+				{
+					"territory_id": "336",
+					"status": "visited"
+				}
+			]
+		},
+		{
+			"id": "c2975348-dd0a-4f31-8fb2-51e1e661849e",
+			"name": "Choir tour 3 - W Europe",
+			"start_date": "2018-12-28",
+			"end_date": "2019-01-04",
+			"notes": "",
+			"created_at": "2026-07-10T01:37:13.701702+00:00",
+			"territories": [
+				{
+					"territory_id": "250",
+					"status": "slept_in"
+				},
+				{
+					"territory_id": "724",
+					"status": "slept_in"
+				},
+				{
+					"territory_id": "620",
+					"status": "slept_in"
+				}
+			]
+		}
+	]
+}
