@@ -4,20 +4,13 @@ import { TerritoryPanel } from './components/TerritoryPanel'
 import { TripsPanel } from './components/TripsPanel'
 import { TripEditor } from './components/TripEditor'
 import { Dashboard } from './components/Dashboard'
-import { AuthScreen } from './components/AuthScreen'
-import { SetupScreen } from './components/SetupScreen'
-import { useAuth } from './hooks/useAuth'
-import { useStatuses } from './hooks/useStatuses'
-import { useTrips } from './hooks/useTrips'
+import { DataMenu } from './components/DataMenu'
 import { loadTerritories } from './lib/mapData'
-import { supabaseConfigured } from './lib/supabase'
-import { STATUS_CYCLE, STATUS_COLORS, STATUS_LABELS, STATUS_RANK } from './lib/statuses'
-import type { Status, Territory, Trip, TripDraft } from './types'
+import { store, useAppStore } from './lib/store'
+import { STATUS_CYCLE, STATUS_COLORS, STATUS_LABELS } from './lib/statuses'
+import type { Territory, Trip, TripDraft } from './types'
 
 type Panel = { type: 'territory'; id: string } | { type: 'trips' } | null
-
-/** VITE_DEMO=1 skips Supabase entirely: full UI, in-memory data only. */
-const DEMO = import.meta.env.VITE_DEMO === '1'
 
 const emptyDraft = (territoryIds: string[] = []): TripDraft => ({
   name: '',
@@ -28,17 +21,14 @@ const emptyDraft = (territoryIds: string[] = []): TripDraft => ({
 })
 
 export default function App() {
-  const auth = useAuth()
-  const userId = auth.session?.user.id
-  const { statuses, setStatus, cycleStatus, raiseStatus, error: statusError, clearError: clearStatusError } = useStatuses(userId)
-  const { trips, saveTrip, deleteTrip, error: tripError, clearError: clearTripError } = useTrips(userId)
+  const { data, fileState, fileName, error } = useAppStore()
+  const { statuses, trips } = data
 
   const [territories, setTerritories] = useState<Territory[] | null>(null)
   const [mapError, setMapError] = useState<string | null>(null)
   const [panel, setPanel] = useState<Panel>(null)
   const [draft, setDraft] = useState<TripDraft | null>(null)
   const [showDashboard, setShowDashboard] = useState(false)
-  const [saving, setSaving] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<TripDraft | null>(null)
 
   useEffect(() => {
@@ -54,11 +44,6 @@ export default function App() {
     [territories],
   )
 
-  if (!DEMO) {
-    if (!supabaseConfigured) return <SetupScreen />
-    if (auth.loading) return <div className="centered-screen muted">Loading…</div>
-    if (!auth.session) return <AuthScreen signIn={auth.signIn} signUp={auth.signUp} />
-  }
   if (mapError) return <div className="centered-screen error">{mapError}</div>
   if (!territories) return <div className="centered-screen muted">Loading map…</div>
 
@@ -72,50 +57,22 @@ export default function App() {
           : [...draft.territories, { territory_id: id, status: 'visited' }],
       })
     } else {
-      cycleStatus(id)
+      store.cycleStatus(id)
     }
   }
 
-  const handleSaveTrip = async () => {
+  const handleSaveTrip = () => {
     if (!draft) return
-    setSaving(true)
-    const saved = await saveTrip(draft)
-    setSaving(false)
-    if (saved) {
-      // Paint the map at least as strongly as the trip claims (never downgrade).
-      for (const tt of saved.territories) raiseStatus(tt.territory_id, tt.status)
-      setDraft(null)
-      setPanel({ type: 'trips' })
-    }
+    store.saveTrip(draft)
+    setDraft(null)
+    setPanel({ type: 'trips' })
   }
 
-  const confirmDeleteTrip = async (resetTerritories: boolean) => {
+  const confirmDeleteTrip = (resetTerritories: boolean) => {
     const doomed = pendingDelete
     setPendingDelete(null)
     if (!doomed?.id) return
-    await deleteTrip(doomed.id)
-    if (resetTerritories) {
-      // Re-derive each territory's status from the trips that remain. Manual
-      // paint isn't tracked separately, so this is best-effort — but leave
-      // lived_in alone (trips can't set it, so it was set by hand).
-      const remaining = trips.filter((t) => t.id !== doomed.id)
-      for (const tt of doomed.territories) {
-        const current = statuses[tt.territory_id] ?? 'not_visited'
-        if (current === 'not_visited' || current === 'lived_in') continue
-        let implied: Status = 'not_visited'
-        for (const t of remaining) {
-          for (const other of t.territories) {
-            if (
-              other.territory_id === tt.territory_id &&
-              STATUS_RANK[other.status] > STATUS_RANK[implied]
-            ) {
-              implied = other.status
-            }
-          }
-        }
-        if (STATUS_RANK[implied] < STATUS_RANK[current]) setStatus(tt.territory_id, implied)
-      }
-    }
+    store.deleteTrip(doomed.id, resetTerritories)
     setDraft(null)
     setPanel({ type: 'trips' })
   }
@@ -125,7 +82,6 @@ export default function App() {
     setDraft({ ...trip })
   }
 
-  const error = statusError ?? tripError
   const selectedTerritory = panel?.type === 'territory' ? byId.get(panel.id) : undefined
 
   return (
@@ -145,15 +101,7 @@ export default function App() {
             Trips
           </button>
           <button onClick={() => setShowDashboard(true)}>Dashboard</button>
-          {!DEMO && (
-            <button
-              className="subtle"
-              onClick={() => auth.signOut()}
-              title={auth.session?.user.email}
-            >
-              Sign out
-            </button>
-          )}
+          <DataMenu fileState={fileState} fileName={fileName} />
         </div>
       </header>
 
@@ -179,7 +127,7 @@ export default function App() {
             territory={selectedTerritory}
             status={statuses[selectedTerritory.id] ?? 'not_visited'}
             trips={trips}
-            onSetStatus={(s) => setStatus(selectedTerritory.id, s)}
+            onSetStatus={(s) => store.setStatus(selectedTerritory.id, s)}
             onEditTrip={startEditTrip}
             onNewTripHere={() => {
               setPanel(null)
@@ -210,7 +158,7 @@ export default function App() {
             onSave={handleSaveTrip}
             onDelete={draft.id ? () => setPendingDelete(draft) : null}
             onCancel={() => setDraft(null)}
-            saving={saving}
+            saving={false}
           />
         )}
       </main>
@@ -256,13 +204,7 @@ export default function App() {
       {error && (
         <div className="toast error" role="alert">
           {error}
-          <button
-            className="icon-button"
-            onClick={() => {
-              clearStatusError()
-              clearTripError()
-            }}
-          >
+          <button className="icon-button" onClick={() => store.clearError()}>
             ✕
           </button>
         </div>

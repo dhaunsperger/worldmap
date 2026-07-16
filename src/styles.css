@@ -492,6 +492,70 @@ textarea:focus {
   background: var(--border);
 }
 
+/* ---- Data menu ---- */
+
+.data-menu {
+  position: relative;
+}
+
+.sync-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 7px;
+  vertical-align: 1px;
+}
+
+.menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+}
+
+.menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  width: 280px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px;
+  z-index: 21;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.menu hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 6px 0;
+}
+
+.menu-item {
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 7px;
+  width: 100%;
+}
+
+.menu-item:hover {
+  background: var(--surface-2);
+}
+
+.menu-note {
+  font-size: 0.78rem;
+  color: var(--ink-muted);
+  margin: 4px 2px;
+  padding: 0 8px;
+  line-height: 1.4;
+}
+
 /* ---- Legend ---- */
 
 .legend-row {

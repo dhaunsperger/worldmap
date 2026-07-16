@@ -10,7 +10,6 @@
     "build-map": "node scripts/build-map.mjs"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.45.0",
     "d3-geo": "^3.1.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -19,10 +18,11 @@
   "devDependencies": {
     "@types/d3-geo": "^3.1.0",
     "@types/geojson": "^7946.0.14",
-    "@types/topojson-specification": "^1.0.5",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@types/topojson-client": "^3.1.4",
+    "@types/topojson-specification": "^1.0.5",
+    "@types/wicg-file-system-access": "^2023.10.7",
     "@vitejs/plugin-react": "^4.3.1",
     "mapshaper": "^0.6.102",
     "topojson-server": "^3.0.1",
