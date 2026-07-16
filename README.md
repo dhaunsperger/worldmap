@@ -6,43 +6,45 @@ A personal travel tracker: a scratch-map-style clickable world map covering
 - **Left-click** a territory to cycle it: not visited → visited → slept in → lived in
 - **Right-click** a territory for details: set status directly, see its trips, start a new trip
 - **Trips** record when you were somewhere — an optional date range, notes, and
-  any number of territories (click the map while editing to add/remove them)
+  any number of territories, each marked *visited* or *slept in* (drag between
+  boxes in the editor; click the map while editing to add/remove places)
 - **Dashboard** shows progress bars (countries / US states / provinces),
   status counts, and trips by year
 
-Built with Vite + React + TypeScript. Data lives in [Supabase](https://supabase.com)
-(Postgres + auth); the app deploys as a static site (e.g. [Vercel](https://vercel.com)).
+Built with Vite + React + TypeScript. **No backend, no accounts** — the app is
+a fully static site.
 
-## Setup
+## Where the data lives
 
-### 1. Supabase
+- Primary store: the browser's localStorage (instant, automatic).
+- **Data → Create sync file…** links a JSON file via the File System Access
+  API (Chrome/Edge on desktop); every change auto-saves to it. Put that file
+  inside your **OneDrive** (or Dropbox/Drive) folder and you get cloud backup
+  and machine-to-machine sync for free. On startup, if the file is newer than
+  the browser copy (synced from another machine), the file wins.
+- **Data → Export / Import JSON** works in every browser — use it for manual
+  backups or to move data anywhere.
 
-1. Create a project at supabase.com.
-2. Open the project's **SQL editor** and run the contents of
-   [`supabase/schema.sql`](supabase/schema.sql).
-3. From **Project Settings → API**, copy the project URL and the `anon` public key.
+### Migrating from the old Supabase version
 
-### 2. Local development
+Run `scripts/supabase-export.sql` in the Supabase SQL editor, save the
+result cell to a `.json` file, then **Data → Import JSON…** in the app.
+
+## Development
 
 ```sh
 npm install
-cp .env.example .env.local   # fill in the two values from step 3 above
 npm run dev
 ```
 
-Create your account with the sign-up form on first launch (email + password).
+No configuration needed.
 
-**No Supabase yet?** `VITE_DEMO=1 npm run dev` runs the full UI with in-memory
-data — nothing is saved.
+## Deployment
 
-### 3. Deploy to Vercel
-
-1. Import this repo in Vercel (it auto-detects Vite; build command `npm run build`,
-   output `dist`).
-2. Add the environment variables `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
-   in the Vercel project settings.
-3. Deploy. Optionally disable new sign-ups afterwards in Supabase
-   (**Authentication → Providers → Email**) since this is a single-user app.
+Any static host. On Vercel: import the repo, defaults work (build
+`npm run build`, output `dist`). No environment variables required — if the
+old `VITE_SUPABASE_*` variables are still set, they're ignored and can be
+deleted.
 
 ## Regenerating the map
 
